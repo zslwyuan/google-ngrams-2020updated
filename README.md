@@ -4,7 +4,7 @@ Here you'll find a basic python script to retrieve data behind the trajectories 
 
 **This is an updated version of [Matt Nicklay's google-ngrams](https://github.com/econpy/google-ngrams).** 
 
-In this version, latest corpus set released in 2019 is included and some adaption to the responses from [Google Ngram Viewer](http://books.google.com/ngrams), which has been changed recently, is implemented. Pull request has been sent but it seems that the repository has not been updated by the contributors for 6 years. Therefore, I hope this temporary repository can resolve someone's problems, which was also encountered by me.
+In this version, latest corpus set released in 2019 is included, a large number of queries are supported, and some adaption to the responses from [Google Ngram Viewer](http://books.google.com/ngrams), which has been changed recently, is implemented. Pull request has been sent but it seems that the repository has not been updated by the contributors for 6 years. Therefore, I hope this temporary repository can resolve someone's problems, which was also encountered by me.
 
 # Dependencies
 

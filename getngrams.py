@@ -22,39 +22,68 @@ corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_us_2019=28,
 
 
 def getNgrams(query, corpus, startYear, endYear, smoothing, caseInsensitive):
-    params = dict(content=query, year_start=startYear, year_end=endYear,
-                  corpus=corpora[corpus], smoothing=smoothing,
-                  case_insensitive=caseInsensitive)
-    if params['case_insensitive'] is False:
-        params.pop('case_insensitive')
-    if '?' in params['content']:
-        params['content'] = params['content'].replace('?', '*')
-    if '@' in params['content']:
-        params['content'] = params['content'].replace('@', '=>')
 
-    req = requests.get('http://books.google.com/ngrams/graph', params=params)
-    res = re.findall('ngrams.data = .*\];', req.text)
-    assert(len(res)==1)
+    data = dict()
+    availabledata = ""
 
-    if res:
-        dataDict = literal_eval(res[0].replace(
-            "ngrams.data = ", "").replace(";", ""))
-        data = {qry['ngram']: qry['timeseries']
-                for qry in dataDict}
+    queryList = query.split(',')
+    numQuery = len(queryList)
+
+    for i in range(0, numQuery, 10):
+
+        params = dict(year_start=startYear, year_end=endYear,
+                      corpus=corpora[corpus], smoothing=smoothing,
+                      case_insensitive=caseInsensitive)
+
+        if (i+10 < numQuery):
+            params['content'] = ','.join(queryList[i:i+10])
+        else:
+            params['content'] = ','.join(queryList[i:numQuery])
+
+        if params['case_insensitive'] is False:
+            params.pop('case_insensitive')
+        if '?' in params['content']:
+            params['content'] = params['content'].replace('?', '*')
+        if '@' in params['content']:
+            params['content'] = params['content'].replace('@', '=>')
+
+        req = requests.get(
+            'http://books.google.com/ngrams/graph', params=params)
+        res = re.findall('ngrams.data = .*\];', req.text)
+
+        assert(len(res) == 1)
+
+        if res:
+            curdataDict = literal_eval(res[0].replace(
+                "ngrams.data = ", "").replace(";", ""))
+            curData = {qry['ngram']: qry['timeseries']
+                       for qry in curdataDict}
+            data = {**data, **curData}
+
+        if (params['content'] != ""):
+            if (availabledata == ""):
+                availabledata = params['content']
+            else:
+                availabledata = availabledata + "," + params['content']
+
+    if (len(data) == 0):
+        df = DataFrame()
+    else:
         df = DataFrame(data)
         df.insert(0, 'year', list(range(startYear, endYear + 1)))
-    else:
-        df = DataFrame()
-    return req.url, params['content'], df
+
+    return availabledata, df
+
 
 def trimSpaceNearComma(argumentString):
-    while (argumentString.find(', ')>=0):
-        argumentString = argumentString.replace(', ',',')
-    while (argumentString.find(' ,')>=0):
-        argumentString = argumentString.replace(' ,',',')
+    while (argumentString.find(', ') >= 0):
+        argumentString = argumentString.replace(', ', ',')
+    while (argumentString.find(' ,') >= 0):
+        argumentString = argumentString.replace(' ,', ',')
     return argumentString
 
-def runQuery(argumentString):    
+
+def runQuery(argumentString):
     arguments = trimSpaceNearComma(argumentString).split()
     query = ' '.join([arg for arg in arguments if not arg.startswith('-')])
     if '?' in query:
@@ -107,8 +136,8 @@ def runQuery(argumentString):
                              "case-insensitive option was ignored."
         else:
             notifyUser = False
-        url, urlquery, df = getNgrams(query, corpus, startYear, endYear,
-                                      smoothing, caseInsensitive)
+        urlquery, df = getNgrams(query, corpus, startYear, endYear,
+                                 smoothing, caseInsensitive)
         if not allData:
             if caseInsensitive is True:
                 for col in df.columns:
@@ -146,6 +175,10 @@ def runQuery(argumentString):
             word_case = 'caseInsensitive'
         else:
             word_case = 'caseSensitive'
+
+        if (len(queries) > 20):
+            queries = "ManyQueries"
+
         filename = '%s-%s-%d-%d-%d-%s.csv' % (queries, corpus, startYear,
                                               endYear, smoothing, word_case)
         if toSave:
@@ -166,6 +199,7 @@ def runQuery(argumentString):
                     print(('Plotting Failed: %s' % filename))
         if notifyUser:
             print(warningMessage)
+
 
 if __name__ == '__main__':
     argumentString = ' '.join(sys.argv[1:])
